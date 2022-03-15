@@ -196,7 +196,7 @@ class maytag_Sensor(Entity):
                 if self._ModelNumber[2] == "W":
                     self._name = "Washer"
                 elif self._ModelNumber[2] == "D":
-                    slef._name = "Dryer"
+                    self._name = "Dryer"
 
             except:
 
