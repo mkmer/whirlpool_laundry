@@ -11,5 +11,6 @@
   "codeowners": [
     "@mkmer"
   ],
+  "version" : "0.0.1",
   "iot_class": "cloud_polling"
 }
