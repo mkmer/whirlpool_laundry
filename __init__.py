@@ -1,39 +1,17 @@
 """The Whirlpool Laundry integration."""
 # from __future__ import annotations
 import logging
-import asyncio
+
+from homeassistant import config_entries, core
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant import config_entries, core
+from homeassistant.helpers.typing import ConfigType
+
 from .const import DOMAIN
 
-# TODO List the platforms that you want to support.
-# For your initial PR, limit it to 1 platform.
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
-
-# # Only one sensor update once every 60 seconds to avoid
-# entity_next = 0
-
-# @callback
-# def do_update(time):
-# nonlocal entity_next
-# entities[entity_next].async_schedule_update_ha_state(True)
-# entity_next = (entity_next + 1) % len(entities)
-
-# track_time_interval(hass, do_update, BASE_INTERVAL)
-
-
-# async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-#    """Set up Whirlpool Laundry from a config entry."""
-#    # TODO Store an API object for your platforms to access
-##    # hass.data[DOMAIN][entry.entry_id] = MyApi(...)
-
-# hass.config_entries.async_setup_platforms(entry, PLATFORMS)
-
-# hass.data[DOMAIN][entry.entry_id] =
-# return True
 
 
 async def async_setup_entry(
@@ -63,7 +41,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def async_setup(hass: core.HomeAssistant, config: dict) -> bool:
+async def async_setup(hass: core.HomeAssistant, config: ConfigType) -> bool:
     """Set up the GitHub Custom component from yaml configuration."""
     hass.data.setdefault(DOMAIN, {})
     return True

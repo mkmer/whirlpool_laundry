@@ -1,12 +1,11 @@
 {
   "domain": "whirlpool_laundry",
   "name": "Whirlpool Laundry",
+  "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/whirlpool_laundry",
   "requirements": [],
   "ssdp": [],
   "zeroconf": [],
-  "config_flow": true,
-  "version" : "1.0.0",
   "homekit": {},
   "dependencies": [],
   "codeowners": [

@@ -1,21 +1,20 @@
-"""Sensor for Whirlpool Laundry account status."""
-from datetime import timedelta, datetime
+"""The Sensor for Whirlpool Laundry account."""
+from datetime import datetime, timedelta
 import logging
+
+import aiohttp
 
 # from typing import Callable
 import requests
-import aiohttp
 import voluptuous as vol
 
+from homeassistant import config_entries
 from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.typing import (
-    ConfigType,
-    DiscoveryInfoType,
-    HomeAssistantType,
-)
-from homeassistant import config_entries
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,10 +44,11 @@ BASE_INTERVAL = timedelta(minutes=5)
 
 
 async def async_setup_entry(
-    hass: HomeAssistantType,
+    hass: HomeAssistant,
     config_entry: config_entries.ConfigEntry,
-    async_add_entities,
-):
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Config flow entry for Whrilpool Laundry."""
     config = hass.data[DOMAIN][config_entry.entry_id]
     user = config["username"]
     password = config["password"]
@@ -67,19 +67,19 @@ async def async_setup_entry(
     }
 
     # result = await hass.async_add_executor_job(hub.update)
-    headers = {}
     async with aiohttp.ClientSession() as session:
-        async with session.post(auth_url, data=auth_data, headers=auth_header) as r:
-            data = await r.json()
+        async with session.post(
+            auth_url, data=auth_data, headers=auth_header
+        ) as response:
+            data = await response.json()
         session.close()
 
-    entitiesWasher = [maytag_Sensor(user, password, said) for said in data.get("SAID")]
-    if entitiesWasher:
-        async_add_entities(entitiesWasher, True)
+    entities = [MaytagSensor(user, password, said) for said in data.get("SAID")]
+    if entities:
+        async_add_entities(entities, True)
 
 
-class maytag_Sensor(Entity):
-
+class MaytagSensor(Entity):
     """A class for the mealviewer account."""
 
     def __init__(self, user, password, said):
@@ -90,9 +90,13 @@ class maytag_Sensor(Entity):
         self._said = said
         self._reauthorize = True
         self._access_token = None
-        self._reauthCouter = 0
+        self._reauthcouter = 0
         self._state = "offline"
-        self._updateCounter = 0
+        self._status = "Unknown"
+        self.attrib = {}
+        self._endtime = None
+        self._timeremaining = None
+        self._modelnumber = None
 
     @property
     def name(self):
@@ -131,35 +135,31 @@ class maytag_Sensor(Entity):
                 "password": self._password,
             }
 
-            headers = {}
-            r = requests.post(auth_url, data=auth_data, headers=auth_header)
-            data = r.json()
+            response = requests.post(auth_url, data=auth_data, headers=auth_header)
+            data = response.json()
 
             self._access_token = data.get("access_token")
 
-            self._reauthCouter = 0
+            self._reauthcouter = 0
             self._reauthorize = False
 
-        except:
+        except requests.ConnectionError:
             self._access_token = None
-            self._reauthCouter = self._reauthCouter + 1
+            self._reauthcouter = self._reauthcouter + 1
             self._reauthorize = True
-            self._status = "Authorization failed " + self._reauthCouter + " times"
+            self._status = "Authorization failed " + self._reauthcouter + " times"
             self._state = "Authorization failed"
             self.attrib = {}
-            self._end_time = None
-            self._timeRemaining = None
+            self._endtime = None
+            self._timeremaining = None
 
     def update(self):
         """Update device state."""
-        if self._reauthorize and self._reauthCouter < 5:
+        if self._reauthorize and self._reauthcouter < 5:
             self.authorize()
 
         if self._access_token is not None:
             try:
-
-                headers = {}
-
                 new_url = "https://api.whrcloud.com/api/v1/appliance/" + self._said
 
                 new_header = {
@@ -171,10 +171,10 @@ class maytag_Sensor(Entity):
                     "Cache-Control": "no-cache",
                 }
 
-                r = requests.get(new_url, data={}, headers=new_header)
-                data = r.json()
+                response = requests.get(new_url, data={}, headers=new_header)
+                data = response.json()
                 self.attrib = data.get("attributes")
-                self._ModelNumber = (
+                self._modelnumber = (
                     data.get("attributes").get("ModelNumber").get("value")
                 )
                 self._status = (
@@ -182,30 +182,30 @@ class maytag_Sensor(Entity):
                     .get("Cavity_CycleStatusMachineState")
                     .get("value")
                 )
-                self._timeRemaining = (
+                self._timeremaining = (
                     data.get("attributes")
                     .get("Cavity_TimeStatusEstTimeRemaining")
                     .get("value")
                 )
-                self._end_time = datetime.now() + timedelta(
-                    seconds=int(self._timeRemaining)
+                self._endtime = datetime.now() + timedelta(
+                    seconds=int(self._timeremaining)
                 )
                 # status: [0=off, 1=on but not running, 7=running, 6=paused, 10=cycle complete]
 
                 self._state = UNIT_STATES.get(self._status, self._status)
-                if self._ModelNumber[2] == "W":
+                if self._modelnumber[2] == "W":
                     self._name = "Washer"
-                elif self._ModelNumber[2] == "D":
+                elif self._modelnumber[2] == "D":
                     self._name = "Dryer"
 
-            except:
+            except requests.ConnectionError:
 
                 self._status = "Data Update Failed"
                 self._state = "Data Update Failed"
                 self.attrib = {}
                 self._reauthorize = True
-                self._timeRemaining = None
-                self._end_time = None
+                self._timeremaining = None
+                self._endtime = None
 
         else:  # No token... try again!
             self._reauthorize = True
@@ -216,13 +216,13 @@ class maytag_Sensor(Entity):
         attr = {}
         for key, value in self.attrib.items():
             attr[key] = value["value"]
-        attr["end_time"] = self._end_time
+        attr["end_time"] = self._endtime
         return attr
 
     @property
     def icon(self):
         """Return the icon to use in the frontend."""
-        if self._ModelNumber[2] == "D":
+        if self._modelnumber[2] == "D":
             return ICON_D
-        else:
-            return ICON_W
+
+        return ICON_W

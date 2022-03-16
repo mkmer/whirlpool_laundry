@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import logging
 from typing import Any
-import requests
-import voluptuous as vol
+
 import aiohttp
+import voluptuous as vol
+
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
@@ -15,7 +16,6 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# TODO adjust the data schema to the data that you need
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required("username"): str,
@@ -29,13 +29,6 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    # TODO validate the data can be used to set up a connection.
-
-    # If your PyPI package is not built with async, pass your methods
-    # to the executor:
-    # await hass.async_add_executor_job(
-    #     your_validate_func, data["username"], data["password"]
-    # )
     user = data["username"]
     password = data["password"]
 
@@ -53,12 +46,13 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     }
 
     # result = await hass.async_add_executor_job(hub.update)
-    headers = {}
     async with aiohttp.ClientSession() as session:
-        async with session.post(auth_url, data=auth_data, headers=auth_header) as r:
-            if not r.ok:
+        async with session.post(
+            auth_url, data=auth_data, headers=auth_header
+        ) as response:
+            if not response.ok:
                 raise CannotConnect
-            data = await r.json()
+            data = await response.json()
 
         session.close()
 
@@ -66,8 +60,8 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     if "error" in data:  # we found and error in the connection
         if data["error"] == "invalid_request":
             raise InvalidAuth
-        else:
-            raise Exception
+
+        raise Exception
 
     return {"title": "Whirlpool Laundry"}
 
@@ -98,7 +92,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
-            self.data = user_input
             return self.async_create_entry(title=info["title"], data=user_input)
 
         return self.async_show_form(
