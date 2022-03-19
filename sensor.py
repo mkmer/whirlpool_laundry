@@ -76,11 +76,11 @@ async def async_setup_entry(
 
     entities = [MaytagSensor(user, password, said) for said in data.get("SAID")]
     if entities:
-        async_add_entities(entities, True)
+        async_add_entities(entities)
 
 
 class MaytagSensor(Entity):
-    """A class for the mealviewer account."""
+    """A class for the Maytag account."""
 
     def __init__(self, user, password, said):
         """Initialize the sensor."""
@@ -90,7 +90,6 @@ class MaytagSensor(Entity):
         self._said = said
         self._reauthorize = True
         self._access_token = None
-        self._reauthcouter = 0
         self._state = "offline"
         self._status = "Unknown"
         self.attrib = {}
@@ -104,10 +103,9 @@ class MaytagSensor(Entity):
         return self._name
 
     @property
-    def entity_id(self):
-        """Return the entity ID."""
-
-        return "sensor.maytag_" + (self._said).lower()
+    def unique_id(self) -> str:
+        """Return a unique identifier for this client."""
+        return f"{self._said}"
 
     @property
     def state(self):
@@ -140,14 +138,12 @@ class MaytagSensor(Entity):
 
             self._access_token = data.get("access_token")
 
-            self._reauthcouter = 0
             self._reauthorize = False
 
         except requests.ConnectionError:
             self._access_token = None
-            self._reauthcouter = self._reauthcouter + 1
             self._reauthorize = True
-            self._status = "Authorization failed " + self._reauthcouter + " times"
+            self._status = "Authorization failed"
             self._state = "Authorization failed"
             self.attrib = {}
             self._endtime = None
@@ -155,7 +151,7 @@ class MaytagSensor(Entity):
 
     def update(self):
         """Update device state."""
-        if self._reauthorize and self._reauthcouter < 5:
+        if self._reauthorize :
             self.authorize()
 
         if self._access_token is not None:
@@ -222,7 +218,7 @@ class MaytagSensor(Entity):
     @property
     def icon(self):
         """Return the icon to use in the frontend."""
-        if self._modelnumber[2] == "D":
+        if self._modelnumber is not None and self._modelnumber[2] == "D":
             return ICON_D
 
         return ICON_W
