@@ -84,7 +84,7 @@ class MaytagSensor(Entity):
 
     def __init__(self, user, password, said):
         """Initialize the sensor."""
-        self._name = "Unknown"
+        self._name = "maytag_" + (said).lower()
         self._user = user
         self._password = password
         self._said = said
