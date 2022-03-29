@@ -72,7 +72,7 @@ async def async_setup_entry(
             auth_url, data=auth_data, headers=auth_header
         ) as response:
             data = await response.json()
-        session.close()
+        await session.close()
 
     entities = [MaytagSensor(user, password, said) for said in data.get("SAID")]
     if entities:
