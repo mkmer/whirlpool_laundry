@@ -6,7 +6,6 @@ from homeassistant import config_entries, core
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
 
@@ -38,8 +37,3 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return unload_ok
 
-
-#async def async_setup(hass: core.HomeAssistant, config: ConfigType) -> bool:
-#    """Set up the GitHub Custom component from yaml configuration."""
-#    hass.data.setdefault(DOMAIN, {})
-#    return True

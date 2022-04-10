@@ -183,9 +183,13 @@ class MaytagSensor(Entity):
                     .get("Cavity_TimeStatusEstTimeRemaining")
                     .get("value")
                 )
-                self._endtime = datetime.now() + timedelta(
-                    seconds=int(self._timeremaining)
-                )
+                if int(self._status) > 1 and int(self._status) <10:
+                    self._endtime = datetime.now() + timedelta(
+                        seconds=int(self._timeremaining)
+                    )
+                else:
+                    self._endtime = datetime.now()
+
                 # status: [0=off, 1=on but not running, 7=running, 6=paused, 10=cycle complete]
 
                 self._state = UNIT_STATES.get(self._status, self._status)
