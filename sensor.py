@@ -76,7 +76,7 @@ async def async_setup_entry(
 
     entities = [MaytagSensor(user, password, said) for said in data.get("SAID")]
     if entities:
-        async_add_entities(entities)
+        async_add_entities(entities,True)
 
 
 class MaytagSensor(Entity):
