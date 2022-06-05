@@ -169,38 +169,46 @@ class MaytagSensor(Entity):
 
                 response = requests.get(new_url, data={}, headers=new_header)
                 _LOGGER.debug(f"Got message {response}")
-                data = response.json()
-                if data is None:
-                    self.authorize()
+                if response.status_code == 401:
+                    _LOGGER.debug(f"Got 401, attemping to login: {response}")
+                    self._reauthorize = True
+
                 else:
-                    self.attrib = data.get("attributes")
-                    self._modelnumber = (
-                        data.get("attributes").get("ModelNumber").get("value")
-                    )
-                    self._status = (
-                        data.get("attributes")
-                        .get("Cavity_CycleStatusMachineState")
-                        .get("value")
-                    )
-                    self._timeremaining = (
-                        data.get("attributes")
-                        .get("Cavity_TimeStatusEstTimeRemaining")
-                        .get("value")
-                    )
-                    if int(self._status) == 7:
-                        self._endtime = datetime.now() + timedelta(
-                            seconds=int(self._timeremaining)
+                    _LOGGER.debug(f"Received message {response}")
+                    try:
+                        data = response.json()
+                    
+                        self.attrib = data.get("attributes")
+                        self._modelnumber = (
+                            data.get("attributes").get("ModelNumber").get("value")
                         )
-                    else:
-                        self._endtime = datetime.now()
+                        self._status = (
+                            data.get("attributes")
+                            .get("Cavity_CycleStatusMachineState")
+                            .get("value")
+                        )
+                        self._timeremaining = (
+                            data.get("attributes")
+                            .get("Cavity_TimeStatusEstTimeRemaining")
+                            .get("value")
+                        )
+                        if int(self._status) == 7:
+                            self._endtime = datetime.now() + timedelta(
+                                seconds=int(self._timeremaining)
+                            )
+                        else:
+                            self._endtime = datetime.now()
 
-                    # status: [0=off, 1=on but not running, 7=running, 6=paused, 10=cycle complete]
+                        # status: [0=off, 1=on but not running, 7=running, 6=paused, 10=cycle complete]
 
-                    self._state = UNIT_STATES.get(self._status, self._status)
-                    if self._modelnumber[2] == "W":
-                        self._name = "Washer"
-                    elif self._modelnumber[2] == "D":
-                        self._name = "Dryer"
+                        self._state = UNIT_STATES.get(self._status, self._status)
+                        if self._modelnumber[2] == "W":
+                            self._name = "Washer"
+                        elif self._modelnumber[2] == "D":
+                            self._name = "Dryer"
+                    except requests.exceptions.JSONDecodeError:
+                        self._reauthorize = True
+
 
             except requests.ConnectionError:
 
