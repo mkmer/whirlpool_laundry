@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.exceptions import PlatformNotReady
 
 from .const import DOMAIN
 
@@ -140,7 +141,7 @@ class MaytagSensor(Entity):
 
             self._reauthorize = False
 
-        except requests.ConnectionError:
+        except requests.ConnectionError as ex:
             self._access_token = None
             self._reauthorize = True
             self._status = "Authorization failed"
@@ -148,6 +149,7 @@ class MaytagSensor(Entity):
             self.attrib = {}
             self._endtime = None
             self._timeremaining = None
+            raise PlatformNotReady(ex) from ex
 
     def update(self):
         """Update device state."""
