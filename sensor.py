@@ -2,9 +2,6 @@
 from datetime import datetime, timedelta
 import logging
 
-import aiohttp
-
-# from typing import Callable
 import requests
 import voluptuous as vol
 
@@ -14,7 +11,6 @@ from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.exceptions import PlatformNotReady
 
 from .const import DOMAIN
 
@@ -53,30 +49,11 @@ async def async_setup_entry(
     config = hass.data[DOMAIN][config_entry.entry_id]
     user = config["username"]
     password = config["password"]
-
-    auth_url = "https://api.whrcloud.com/oauth/token"
-    auth_header = {
-        "Content-Type": "application/x-www-form-urlencoded",
-    }
-
-    auth_data = {
-        "client_id": "maytag_ios",
-        "client_secret": "OfTy3A3rV4BHuhujkPThVDE9-SFgOymJyUrSbixjViATjCGviXucSKq2OxmPWm8DDj9D1IFno_mZezTYduP-Ig",
-        "grant_type": "password",
-        "username": user,
-        "password": password,
-    }
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            auth_url, data=auth_data, headers=auth_header
-        ) as response:
-            data = await response.json()
-        await session.close()
+    data = config["data"]
 
     entities = [MaytagSensor(user, password, said) for said in data.get("SAID")]
     if entities:
-        async_add_entities(entities,True)
+        async_add_entities(entities, True)
 
 
 class MaytagSensor(Entity):
@@ -140,7 +117,7 @@ class MaytagSensor(Entity):
 
             self._reauthorize = False
 
-        except requests.ConnectionError as ex:
+        except requests.ConnectionError:
             self._access_token = None
             self._reauthorize = True
             self._status = "Authorization failed"
@@ -148,11 +125,10 @@ class MaytagSensor(Entity):
             self.attrib = {}
             self._endtime = None
             self._timeremaining = None
-            #raise PlatformNotReady(ex) from ex
 
     def update(self):
         """Update device state."""
-        if self._reauthorize :
+        if self._reauthorize:
             self.authorize()
 
         if self._access_token is not None:
@@ -169,7 +145,6 @@ class MaytagSensor(Entity):
                 }
 
                 response = requests.get(new_url, data={}, headers=new_header)
-                _LOGGER.debug(f"Got message {response}")
                 data = response.json()
                 if data is None:
                     self.authorize()

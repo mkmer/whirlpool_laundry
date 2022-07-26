@@ -54,7 +54,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
                 raise CannotConnect
             data = await response.json()
 
-        session.close()
+        await session.close()
 
     # Return info that you want to store in the config entry.
     if "error" in data:  # we found and error in the connection
