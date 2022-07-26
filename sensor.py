@@ -67,7 +67,6 @@ async def async_setup_entry(
         "password": password,
     }
 
-    # result = await hass.async_add_executor_job(hub.update)
     async with aiohttp.ClientSession() as session:
         async with session.post(
             auth_url, data=auth_data, headers=auth_header
@@ -149,7 +148,7 @@ class MaytagSensor(Entity):
             self.attrib = {}
             self._endtime = None
             self._timeremaining = None
-            raise PlatformNotReady(ex) from ex
+            #raise PlatformNotReady(ex) from ex
 
     def update(self):
         """Update device state."""
