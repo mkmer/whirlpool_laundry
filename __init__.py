@@ -1,5 +1,5 @@
 """The Whirlpool Laundry integration."""
-# from __future__ import annotations
+import asyncio
 import logging
 
 import aiohttp
@@ -50,7 +50,7 @@ async def async_setup_entry(
             ) as response:
                 data = await response.json()
             await session.close()
-    except (aiohttp.ClientConnectionError) as ex:
+    except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as ex:
         raise PlatformNotReady(f"Failed to connect: {ex}") from ex
 
     hass_data.update({"data": data})
