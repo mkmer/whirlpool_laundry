@@ -151,16 +151,14 @@ class MaytagSensor(Entity):
                 else:
                     self.attrib = data.get("attributes")
                     self._modelnumber = (
-                        data.get("attributes").get("ModelNumber").get("value")
+                        self.attrib.get("ModelNumber").get("value")
                     )
                     self._status = (
-                        data.get("attributes")
-                        .get("Cavity_CycleStatusMachineState")
+                        self.attrib.get("Cavity_CycleStatusMachineState")
                         .get("value")
                     )
                     self._timeremaining = (
-                        data.get("attributes")
-                        .get("Cavity_TimeStatusEstTimeRemaining")
+                        self.attrib.get("Cavity_TimeStatusEstTimeRemaining")
                         .get("value")
                     )
                     if int(self._status) == 7:
