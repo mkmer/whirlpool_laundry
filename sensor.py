@@ -167,8 +167,8 @@ class MaytagSensor(Entity):
                 }
 
                 response = requests.get(new_url, data={}, headers=new_header)
-                _LOGGER.info(f"Message Received: {data}")
                 data = response.json()
+                _LOGGER.info(f"Message Received: {data}")
                 if data is None:
                     self.authorize()
                 else:
