@@ -172,14 +172,15 @@ class MaytagSensor(Entity):
                     self.authorize()
                 else:
                     self.attrib = data.get("attributes")
-                    self._status = (
-                        self.attrib.get("Cavity_CycleStatusMachineState")
-                        .get("value")
-                    )
-                    self._timeremaining = (
-                        self.attrib.get("Cavity_TimeStatusEstTimeRemaining")
-                        .get("value")
-                    )
+                    if self.attrib is not None:
+                        self._status = (
+                            self.attrib.get("Cavity_CycleStatusMachineState")
+                            .get("value")
+                        )
+                        self._timeremaining = (
+                            self.attrib.get("Cavity_TimeStatusEstTimeRemaining")
+                            .get("value")
+                        )
                     if int(self._status) == 7:
                         self._endtime = datetime.now() + timedelta(
                             seconds=int(self._timeremaining)
