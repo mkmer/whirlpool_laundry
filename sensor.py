@@ -115,6 +115,28 @@ class MaytagSensor(Entity):
 
             self._access_token = data.get("access_token")
 
+            new_url = "https://api.whrcloud.com/api/v1/appliance/" + self._said
+
+            new_header = {
+                "Authorization": "Bearer " + self._access_token,
+                "Content-Type": "application/json",
+                "Host": "api.whrcloud.com",
+                "User-Agent": "okhttp/3.12.0",
+                "Pragma": "no-cache",
+                "Cache-Control": "no-cache",
+            }
+
+            response = requests.get(new_url, data={}, headers=new_header)
+            data = response.json()
+            if data is not None:
+                self._modelnumber = (
+                    data.get("attributes").get("ModelNumber").get("value")
+                )
+                if self._modelnumber[2] == "W":
+                    self._name = "Washer"
+                elif self._modelnumber[2] == "D":
+                    self._name = "Dryer"
+
             self._reauthorize = False
 
         except requests.ConnectionError:
@@ -150,9 +172,6 @@ class MaytagSensor(Entity):
                     self.authorize()
                 else:
                     self.attrib = data.get("attributes")
-                    self._modelnumber = (
-                        self.attrib.get("ModelNumber").get("value")
-                    )
                     self._status = (
                         self.attrib.get("Cavity_CycleStatusMachineState")
                         .get("value")
@@ -171,10 +190,7 @@ class MaytagSensor(Entity):
                     # status: [0=off, 1=on but not running, 7=running, 6=paused, 10=cycle complete]
 
                     self._state = UNIT_STATES.get(self._status, self._status)
-                    if self._modelnumber[2] == "W":
-                        self._name = "Washer"
-                    elif self._modelnumber[2] == "D":
-                        self._name = "Dryer"
+
 
             except requests.ConnectionError:
 
