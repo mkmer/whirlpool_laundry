@@ -172,8 +172,8 @@ class MaytagSensor(Entity):
                 if data is None:
                     self.authorize()
                 else:
-                    self.attrib = data.get("attributes")
-                    if self.attrib is not None:
+                    if data.get("attributes" ) is not {}:
+                        self.attrib = data.get("attributes")
                         self._status = (
                             self.attrib.get("Cavity_CycleStatusMachineState")
                             .get("value")
