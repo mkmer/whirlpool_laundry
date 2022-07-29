@@ -1,6 +1,7 @@
 """The Sensor for Whirlpool Laundry account."""
 from datetime import datetime, timedelta
 import logging
+from types import NoneType
 
 import requests
 import voluptuous as vol
@@ -172,7 +173,7 @@ class MaytagSensor(Entity):
                 if data is None:
                     self.authorize()
                 else:
-                    if data.get("attributes" ) is not {}:
+                    if not isinstance(data.get("attribute",NoneType)):
                         self.attrib = data.get("attributes")
                         self._status = (
                             self.attrib.get("Cavity_CycleStatusMachineState")
