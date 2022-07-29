@@ -192,7 +192,8 @@ class MaytagSensor(Entity):
                             self._endtime = datetime.now()
 
                     # status: [0=off, 1=on but not running, 7=running, 6=paused, 10=cycle complete]
-
+                    else:
+                        _LOGGER.error(f"Bad Message Received: {data}")
                     self._state = UNIT_STATES.get(self._status, self._status)
 
 
