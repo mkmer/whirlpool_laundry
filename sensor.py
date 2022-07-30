@@ -170,7 +170,7 @@ class MaytagSensor(Entity):
                 response = requests.get(new_url, data={}, headers=new_header)
                 data = response.json()
                 _LOGGER.info(f"Message Received: {data}")
-                if data is None:
+                if response.status_code !=200:
                     self.authorize()
                 else:
                     self.attrib = data.get("attributes")
