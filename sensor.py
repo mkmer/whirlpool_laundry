@@ -142,10 +142,10 @@ class MaytagSensor(Entity):
                 self._modelnumber = (
                     data.get("attributes").get("ModelNumber").get("value")
                 )
-                if self._modelnumber[2] == "W":
-                    self._name = "Washer"
-                elif self._modelnumber[2] == "D":
-                    self._name = "Dryer"
+#                if self._modelnumber[2] == "W":
+#                    self._name = "Washer"
+#                elif self._modelnumber[2] == "D":
+#                    self._name = "Dryer"
 
             self._reauthorize = False
 
