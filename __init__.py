@@ -1,5 +1,4 @@
 """The Whirlpool Laundry integration."""
-import asyncio
 import logging
 
 import aiohttp
@@ -9,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import PlatformNotReady
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
@@ -43,17 +43,17 @@ async def async_setup_entry(
         "username": user,
         "password": password,
     }
+    session = async_get_clientsession(hass)
+
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                auth_url, data=auth_data, headers=auth_header
-            ) as response:
-                data = await response.json()
-            await session.close()
-    except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as ex:
+        async with session.post(
+            auth_url, data=auth_data, headers=auth_header
+        ) as response:
+            data = await response.json()
+    except (aiohttp.ClientConnectionError, aiohttp.ClientConnectorError) as ex:
         raise PlatformNotReady(f"Failed to connect: {ex}") from ex
 
-    hass_data.update({"data": data})
+    hass_data.update({"data": data, "session": session})
     hass.data[DOMAIN][entry.entry_id] = hass_data
     # Forward the setup to the sensor platform.
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
