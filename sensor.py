@@ -1,19 +1,22 @@
 """The Sensor for Whirlpool Laundry account."""
 from datetime import datetime, timedelta
 import logging
-from types import NoneType
-
-import requests
+import asyncio
 import voluptuous as vol
 
+import aiohttp
 from homeassistant import config_entries
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
+
+# from types import NoneType
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,8 +54,10 @@ async def async_setup_entry(
     user = config["username"]
     password = config["password"]
     data = config["data"]
-
-    entities = [MaytagSensor(user, password, said) for said in data.get("SAID")]
+    session = hass.data[DOMAIN][config_entry.entry_id]["session"]
+    entities = [
+        MaytagSensor(user, password, said, session) for said in data.get("SAID")
+    ]
     if entities:
         async_add_entities(entities, True)
 
@@ -60,12 +65,12 @@ async def async_setup_entry(
 class MaytagSensor(Entity):
     """A class for the Maytag account."""
 
-    def __init__(self, user, password, said):
+    def __init__(self, user, password, said, session):
         """Initialize the sensor."""
-        self._name = "maytag_" + (said).lower()
         self._user = user
         self._password = password
         self._said = said
+        self._device_id = said
         self._reauthorize = True
         self._access_token = None
         self._state = "offline"
@@ -74,16 +79,18 @@ class MaytagSensor(Entity):
         self._endtime = None
         self._timeremaining = None
         self._modelnumber = None
+        self._attr_unique_id = f"{self._said}"
+        self._attr_has_entity_name = True
+        self._session = session
 
     @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique identifier for this client."""
-        return f"{self._said}"
+    def device_info(self) -> DeviceInfo:
+        """Device information for Aladdin Connect sensors."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._device_id)},
+            name=self._said,
+            manufacturer="Whirlpool",
+        )
 
     @property
     def state(self):
@@ -95,7 +102,7 @@ class MaytagSensor(Entity):
         """Turn off polling, will do ourselves."""
         return True
 
-    def authorize(self):
+    async def authorize(self):
         """Update device state."""
         try:
             auth_url = "https://api.whrcloud.com/oauth/token"
@@ -111,8 +118,10 @@ class MaytagSensor(Entity):
                 "password": self._password,
             }
 
-            response = requests.post(auth_url, data=auth_data, headers=auth_header)
-            data = response.json()
+            response = await self._session.post(
+                auth_url, data=auth_data, headers=auth_header
+            )
+            data = await response.json()
 
             self._access_token = data.get("access_token")
 
@@ -127,8 +136,8 @@ class MaytagSensor(Entity):
                 "Cache-Control": "no-cache",
             }
 
-            response = requests.get(new_url, data={}, headers=new_header)
-            data = response.json()
+            response = await self._session.get(new_url, data={}, headers=new_header)
+            data = await response.json()
             if data is not None:
                 self._modelnumber = (
                     data.get("attributes").get("ModelNumber").get("value")
@@ -140,7 +149,7 @@ class MaytagSensor(Entity):
 
             self._reauthorize = False
 
-        except requests.ConnectionError:
+        except (aiohttp.ClientConnectionError, aiohttp.ClientConnectorError):
             self._access_token = None
             self._reauthorize = True
             self._status = "Authorization failed"
@@ -149,10 +158,10 @@ class MaytagSensor(Entity):
             self._endtime = None
             self._timeremaining = None
 
-    def update(self):
+    async def async_update(self):
         """Update device state."""
         if self._reauthorize:
-            self.authorize()
+            await self.authorize()
 
         if self._access_token is not None:
             try:
@@ -167,23 +176,21 @@ class MaytagSensor(Entity):
                     "Cache-Control": "no-cache",
                 }
 
-                response = requests.get(new_url, data={}, headers=new_header)
-                data = response.json()
-                _LOGGER.info(f"Message Received: {data}")
-                if response.status_code !=200:
+                response = await self._session.get(new_url, data={}, headers=new_header)
+                data = await response.json()
+                _LOGGER.info("Message Received: %s", data)
+                if data is None:
                     self.authorize()
                 else:
                     self.attrib = data.get("attributes")
-                    if not isinstance(self.attrib,NoneType):
-                        
-                        self._status = (
-                            self.attrib.get("Cavity_CycleStatusMachineState")
-                            .get("value")
-                        )
-                        self._timeremaining = (
-                            self.attrib.get("Cavity_TimeStatusEstTimeRemaining")
-                            .get("value")
-                        )
+                    if not isinstance(self.attrib, type(None)):
+
+                        self._status = self.attrib.get(
+                            "Cavity_CycleStatusMachineState"
+                        ).get("value")
+                        self._timeremaining = self.attrib.get(
+                            "Cavity_TimeStatusEstTimeRemaining"
+                        ).get("value")
                         if int(self._status) == 7:
                             self._endtime = datetime.now() + timedelta(
                                 seconds=int(self._timeremaining)
@@ -196,8 +203,11 @@ class MaytagSensor(Entity):
                         _LOGGER.error(f"Bad Message Received: {data}")
                     self._state = UNIT_STATES.get(self._status, self._status)
 
-
-            except requests.ConnectionError:
+            except (
+                aiohttp.ClientConnectionError,
+                aiohttp.ClientConnectorError,
+                asyncio.TimeoutError,
+            ):
 
                 self._status = "Data Update Failed"
                 self._state = "Data Update Failed"
