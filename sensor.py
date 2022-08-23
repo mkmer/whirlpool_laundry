@@ -181,7 +181,9 @@ class MaytagSensor(Entity):
                 _LOGGER.info("Message Received: %s", data)
                 if data is None:
                     self.authorize()
-                else:
+                elif data.get("error") is not None:
+                    self.authorize()
+                else:    
                     self.attrib = data.get("attributes")
                     if not isinstance(self.attrib, type(None)):
 
