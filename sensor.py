@@ -180,8 +180,10 @@ class MaytagSensor(Entity):
                 data = await response.json()
                 _LOGGER.info("Message Received: %s", data)
                 if data is None:
+                    self._reauthorize = True
                     self.authorize()
                 elif data.get("error") is not None:
+                    self._reauthorize = True
                     self.authorize()
                 else:    
                     self.attrib = data.get("attributes")
